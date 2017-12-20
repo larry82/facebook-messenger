@@ -1,3 +1,7 @@
+require 'facebook/messenger/bot/error_parser'
+require 'facebook/messenger/bot/exceptions'
+require 'facebook/messenger/bot/message_type'
+
 module Facebook
   module Messenger
     # The Bot module sends and receives messages.
@@ -6,8 +10,17 @@ module Facebook
 
       base_uri 'https://graph.facebook.com/v2.6/me'
 
-      EVENTS = [:message, :delivery, :postback, :optin,
-                :read, :account_linking, :standby].freeze
+      EVENTS = %i[
+        message
+        delivery
+        postback
+        optin
+        read
+        account_linking
+        referral
+        message_echo
+        payment
+      ].freeze
 
       class << self
         # Deliver a message with the given payload.
@@ -26,9 +39,9 @@ module Facebook
                             access_token: access_token
                           }
 
-          raise_errors_from(response)
+          Facebook::Messenger::Bot::ErrorParser.raise_errors_from(response)
 
-          response['message_id']
+          response.body
         end
 
         # Register a hook for the given event.
@@ -66,34 +79,6 @@ module Facebook
           $stderr.puts "Ignoring #{event} (no hook registered)"
         end
 
-        # Raise any errors in the given response.
-        #
-        # response - A HTTParty::Response object.
-        #
-        # Returns nil if no errors were found, otherwises raises appropriately.
-        def raise_errors_from(response)
-          return unless response.key? 'error'
-          error = response['error']
-
-          raise(
-            error_class_from_error_code(error['code']),
-            (error['error_data'] || error['message'])
-          )
-        end
-
-        # Find the appropriate error class for the given error code.
-        #
-        # error_code - An Integer describing an error code.
-        #
-        # Returns an error class, or raises KeyError if none was found.
-        def error_class_from_error_code(error_code)
-          {
-            100 => RecipientNotFound,
-            10 => PermissionDenied,
-            2 => InternalError
-          }[error_code] || Facebook::Messenger::Error
-        end
-
         # Return a Hash of hooks.
         def hooks
           @hooks ||= {}
@@ -107,16 +92,13 @@ module Facebook
         # Default HTTParty options.
         def default_options
           super.merge(
+            read_timeout: 300,
             headers: {
               'Content-Type' => 'application/json'
             }
           )
         end
       end
-
-      class RecipientNotFound < Facebook::Messenger::Error; end
-      class PermissionDenied < Facebook::Messenger::Error; end
-      class InternalError < Facebook::Messenger::Error; end
     end
   end
 end
