@@ -18,7 +18,6 @@ module Facebook
         'optin' => Optin,
         'read' => Read,
         'account_linking' => AccountLinking,
-        'messaging_handovers' => Handover,
         'standby' => Standby,
       }.freeze
 
