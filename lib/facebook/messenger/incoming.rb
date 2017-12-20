@@ -17,7 +17,9 @@ module Facebook
         'postback' => Postback,
         'optin' => Optin,
         'read' => Read,
-        'account_linking' => AccountLinking
+        'account_linking' => AccountLinking,
+        'messaging_handovers' => Handover,
+        'standby' => Standby,
       }.freeze
 
       # Parse the given payload.
